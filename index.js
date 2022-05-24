@@ -1,7 +1,7 @@
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
-
+const nodemailer = require('nodemailer');
 const app = express()
 const port = process.env.PORT || 5000
 
@@ -12,7 +12,7 @@ let user = process.env.DB_USER
 let pass = process.env.DB_PASS
 
 const { MongoClient, ServerApiVersion } = require('mongodb')
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ka5da.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
+const uri = `mongodb+srv://khaled:VNHAybzMnVDF6NMq@cluster0.ka5da.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -27,10 +27,7 @@ async function run() {
       .db('toolsmanufacture')
       .collection('products')
 
-    //test
-    // app.get('/test', (req, res) => {
-    //   res.send('api hit')
-    // })
+    
     //index products
     app.get('/product', async (req, res) => {
       const query = {}
@@ -47,6 +44,40 @@ async function run() {
       const result = await productCollection.insertOne(products)
       res.send(result)
     })
+
+    //place order
+    app.post('/placceOrder',cors(),async(req, res)=>{
+      const order = req.body.ordered;
+      const price = req.body.price;
+      const email = req.body.mail;
+      const phone = req.body.phone;
+      const address = req.body.address;
+      try {  
+        var transport = nodemailer.createTransport({
+          host:process.env.SMTP_SERVER,
+          port:process.env.SEND_IN_BLUE_PORT,
+          auth:{
+            user:process.env.SEND_IN_BLUE_LOGIN, 
+            pass:process.env.SEND_IN_BLUE_MASTER_PASS 
+
+          }
+        })
+
+        let mailStatus = await transport.sendMail({
+          from :'kkhaled88hasan@gmail.com',
+          to: email,
+          subject: 'Send from abc manufacturer company',
+          text: 'Body message area'
+        });
+
+        return `Message sent: ${mailStatus.messageId}`;
+        
+      } catch (error) {
+        
+      }
+    
+    })
+
   } finally {
   }
 }

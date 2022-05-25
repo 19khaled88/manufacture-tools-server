@@ -14,7 +14,7 @@ let pass = process.env.DB_PASS
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb')
 // const { ObjectID } = require('bson')
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ka5da.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
+const uri = `mongodb+srv://khaled:VNHAybzMnVDF6NMq@cluster0.ka5da.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -30,6 +30,7 @@ async function run() {
       .collection('products')
     const ratingCollection = client.db('toolsmanufacture').collection('rating')
     const soldCollection = client.db('toolsmanufacture').collection('sold')
+    const userCollection = client.db('toolsmanufacture').collection('users')
 
     //index products
     app.get('/product', async (req, res) => {
@@ -39,6 +40,18 @@ async function run() {
       const cursor = productCollection.find(query)
       const products = await cursor.toArray()
       res.send(products)
+    })
+
+    //upsert user
+    app.put('/user/:email',async(req,res)=>{
+      const user = req.body;
+      const email = req.params.email;
+      const filter = {email:email};
+      const options ={upsert:true};
+      const updateDoc = {
+        $set: user}  
+      const result = await userCollection.updateOne(filter,updateDoc,options)
+      res.send(results);
     })
 
     //insert proudcts

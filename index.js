@@ -52,8 +52,6 @@ async function run() {
     //index products
     app.get('/product', async (req, res) => {
       const query = {}
-      //   const limit = 6
-      //   const cursor = productCollection.find(query).limit(limit)
       const cursor = productCollection.find(query)
       const products = await cursor.toArray()
       res.send(products)

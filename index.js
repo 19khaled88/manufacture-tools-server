@@ -72,9 +72,36 @@ async function run() {
       const token = jwt.sign({ email: email }, process.env.WEB_TOKEN, {
         expiresIn: '1h',
       })
-      res.send({ result, webToken: token })
+      res.send(result)
     })
 
+    // make admin
+    app.put('/admin/:email', middleware, async (req, res) => {
+      const email = req.params.email
+      const filter = { email: email }
+      const ifAdmin = req.decoded.email
+      const findAdmin = await userCollection.findOne({ email: ifAdmin })
+      if (findAdmin.role === 'admin') {
+        const updateDoc = {
+          $set: { role: 'admin' },
+        }
+        const result = await userCollection.updateOne(filter, updateDoc)
+        const token = jwt.sign({ email: email }, process.env.WEB_TOKEN, {
+          expiresIn: '1h',
+        })
+        res.status(200).send({ result, webToken: token })
+      } else {
+        res.status(403).send({ message: 'forbidden access' })
+      }
+    })
+
+    //if admin
+    app.get('/user/admin/:email', async (req, res) => {
+      const email = req.params.email
+      const users = await userCollection.findOne({ email: email })
+      const isAdmin = users.role === 'admin'
+      res.send({ admin: isAdmin })
+    })
     //insert proudcts
     app.post('/product', async (req, res) => {
       const products = req.body
@@ -103,13 +130,34 @@ async function run() {
             product_stock: stock,
           },
         }
-
+        // UPDATE PRODUCT STOCK
         const result = await productCollection.updateOne(
           filter,
           updateDoc,
           options,
         )
-        res.send('Order submited successfully')
+        // SEND MAIL TO BUYER
+        try {
+          var transport = nodemailer.createTransport({
+            host: process.env.E_COMMERCE_SMTP_SERVER,
+            port: process.env.E_COMMERCE_PORT,
+            auth: {
+              user: process.env.E_COMMERCE_USER,
+              pass: process.env.E_COMMERCE_PASS,
+            },
+          })
+
+          let mailStatus = await transport.sendMail({
+            from: 'kkhaled88hasan@gmail.com',
+            to: email,
+            subject: 'Send from abc manufacturer company',
+            text: 'Body message area',
+          })
+
+          return `Message sent: ${mailStatus.messageId}`
+        } catch (error) {}
+
+        res.send('Order submitted successfully')
       }
       // try {
       //   var transport = nodemailer.createTransport({

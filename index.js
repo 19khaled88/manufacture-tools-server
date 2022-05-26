@@ -63,6 +63,7 @@ async function run() {
     app.put('/user/:email', async (req, res) => {
       const user = req.body
       const email = req.params.email
+      console.log(email)
       const filter = { email: email }
       const options = { upsert: true }
       const updateDoc = {
@@ -72,9 +73,21 @@ async function run() {
       const token = jwt.sign({ email: email }, process.env.WEB_TOKEN, {
         expiresIn: '1h',
       })
-      res.send(result)
+      res.send({ result, token })
     })
-
+    //users index
+    app.get('/users', middleware, async (req, res) => {
+      const query = {}
+      const users = await userCollection.find(query).toArray()
+      res.send(users)
+    })
+    //if admin
+    app.get('/users/admin/:email', async (req, res) => {
+      const email = req.params.email
+      const users = await userCollection.findOne({ email: email })
+      const isAdmin = users.role === 'admin'
+      res.send({ admin: isAdmin })
+    })
     // make admin
     app.put('/admin/:email', middleware, async (req, res) => {
       const email = req.params.email
@@ -95,13 +108,6 @@ async function run() {
       }
     })
 
-    //if admin
-    app.get('/user/admin/:email', async (req, res) => {
-      const email = req.params.email
-      const users = await userCollection.findOne({ email: email })
-      const isAdmin = users.role === 'admin'
-      res.send({ admin: isAdmin })
-    })
     //insert proudcts
     app.post('/product', async (req, res) => {
       const products = req.body
@@ -207,12 +213,6 @@ async function run() {
       } else {
         return res.status(403).send({ message: 'forbidden access' })
       }
-    })
-    //users
-    app.get('/users', middleware, async (req, res) => {
-      const query = {}
-      const users = await userCollection.find(query).toArray()
-      res.send(users)
     })
   } finally {
   }

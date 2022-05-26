@@ -4,6 +4,7 @@ const cors = require('cors')
 const nodemailer = require('nodemailer')
 const app = express()
 const port = process.env.PORT || 5000
+const jwt = require('jsonwebtoken')
 ObjectID = require('mongodb').ObjectId
 
 //middleware
@@ -11,6 +12,22 @@ app.use(cors())
 app.use(express.json())
 let user = process.env.DB_USER
 let pass = process.env.DB_PASS
+
+function middleware(req, res, next) {
+  const authorizationHeader = req.headers.authorization
+  if (!authorizationHeader) {
+    return res.status(401).send({ message: 'Unauthrized access' })
+  }
+  const token = authorizationHeader.split(' ')[1]
+
+  jwt.verify(token, process.env.WEB_TOKEN, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: 'Forbidden access' })
+    }
+    req.decoded = decoded
+    next()
+  })
+}
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb')
 // const { ObjectID } = require('bson')
@@ -43,15 +60,19 @@ async function run() {
     })
 
     //upsert user
-    app.put('/user/:email',async(req,res)=>{
-      const user = req.body;
-      const email = req.params.email;
-      const filter = {email:email};
-      const options ={upsert:true};
+    app.put('/user/:email', async (req, res) => {
+      const user = req.body
+      const email = req.params.email
+      const filter = { email: email }
+      const options = { upsert: true }
       const updateDoc = {
-        $set: user}  
-      const result = await userCollection.updateOne(filter,updateDoc,options)
-      res.send(results);
+        $set: user,
+      }
+      const result = await userCollection.updateOne(filter, updateDoc, options)
+      const token = jwt.sign({ email: email }, process.env.WEB_TOKEN, {
+        expiresIn: '1h',
+      })
+      res.send({ result, webToken: token })
     })
 
     //insert proudcts
@@ -72,7 +93,6 @@ async function run() {
       const stock = req.body.stockValue
       const product = req.body.product
       const id = req.body.id
-
       const insert = { name, product, email, address, phone, order, price }
       const result = await soldCollection.insertOne(insert)
       if (result) {
@@ -123,6 +143,28 @@ async function run() {
       const cursor = ratingCollection.find(query)
       const rating = await cursor.toArray(cursor)
       res.send(rating)
+    })
+    // my orders
+    app.get('/order', middleware, async (req, res) => {
+      const user = req.query.user
+      // const authorization = req.headers.authorization
+      // console.log(authorization)
+      const decodedUser = req.decoded.email
+
+      if (decodedUser === user) {
+        const query = { email: user }
+        const orders = soldCollection.find(query)
+        const result = await orders.toArray()
+        return res.send(result)
+      } else {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
+    })
+    //users
+    app.get('/users', middleware, async (req, res) => {
+      const query = {}
+      const users = await userCollection.find(query).toArray()
+      res.send(users)
     })
   } finally {
   }

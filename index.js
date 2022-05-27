@@ -264,11 +264,37 @@ async function run() {
       res.send(result)
     })
     //index sold product
-    app.get('/soldProduct', async (req, res) => {
+    app.get('/allProduct', async (req, res) => {
       const query = {}
-      const cursor = soldCollection.find(query)
+      const cursor = productCollection.find(query)
       const result = await cursor.toArray()
       res.send(result)
+    })
+    //update proudcts
+    app.put('/updateProduct/:id', async (req, res) => {
+      const id = req.params.id
+      const data = req.body
+      const filter = { _id: ObjectId(id) }
+      const options = { upsert: true }
+      const updateDoc = { $set: data }
+      const result = await productCollection.updateOne(
+        filter,
+        updateDoc,
+        options,
+      )
+      res.send(result)
+    })
+    // delete proudcts
+    app.delete('/deleteProduct/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: ObjectId(id) }
+
+      const result = await productCollection.deleteOne(query)
+      if (result.deletedCount === 1) {
+        res.status(200).send(result)
+      } else {
+        res.status(400).send({ message: 'delete unsuccessful' })
+      }
     })
     //delete sold product
     app.delete('/deleteSoldProduct/:id', async (req, res) => {

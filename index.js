@@ -299,14 +299,37 @@ async function run() {
     //delete sold product
     app.delete('/deleteSoldProduct/:id', async (req, res) => {
       const id = req.params.id
-      const query = { _id: ObjectId(id) }
+      const data = req.body
 
+      const product_name = await productCollection.findOne({
+        product_name: data.product_name,
+      })
+      const product_stock = {
+        product_stock:
+          parseInt(product_name.product_stock) + parseInt(data.product_stock),
+      }
+
+      const query = { _id: ObjectId(id) }
       const result = await soldCollection.deleteOne(query)
       if (result.deletedCount === 1) {
+        const filter = { product_name: data.product_name }
+
+        const options = { upsert: true }
+        const updateDoc = { $set: product_stock }
+        const result = await productCollection.updateOne(
+          filter,
+          updateDoc,
+          options,
+        )
         res.status(200).send(result)
       } else {
         res.status(400).send({ message: 'delete unsuccessful' })
       }
+    })
+    //cancel order
+    app.delete('/cancelOrder/:id', async (req, res) => {
+      const id = req.params.id
+      const body = req.body
     })
   } finally {
   }

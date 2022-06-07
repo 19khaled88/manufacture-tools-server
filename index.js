@@ -6,7 +6,7 @@ const app = express()
 const port = process.env.PORT || 5000
 const jwt = require('jsonwebtoken')
 // const ObjectId = require('mongodb').ObjectId
-const stripe = require('strip')('sk_test_R2CFeR89rEgI3qpOm5asg4hD');
+const stripe = require('stripe')('sk_test_R2CFeR89rEgI3qpOm5asg4hD')
 
 //middleware
 app.use(cors())
@@ -17,7 +17,7 @@ let pass = process.env.DB_PASS
 function middleware(req, res, next) {
   const authorizationHeader = req.headers.authorization
   if (!authorizationHeader) {
-    return res.status(401).send({ message: 'Unauthrized access' })
+    return res.status(401).send({ message: 'Unauthorized access' })
   }
   const token = authorizationHeader.split(' ')[1]
 
@@ -68,11 +68,11 @@ async function run() {
       const amount = parseInt(product.price) * 100
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
-        currency: "usd",
-        payment_method_types:['card']
+        currency: 'usd',
+        payment_method_types: ['card'],
       })
       res.send({
-        clientSeret = paymentIntent.client_secret
+        clientSecret: paymentIntent.client_secret,
       })
     })
 
@@ -354,6 +354,14 @@ async function run() {
     app.delete('/cancelOrder/:id', async (req, res) => {
       const id = req.params.id
       const body = req.body
+    })
+    app.put('/confirmPayment/:id', async (req, res) => {
+      const id = req.params.id
+      const filter = { _id: ObjectId(id) }
+      const options = { upsert: true }
+      const updateDoc = { $set: { pay: 'paid' } }
+      const result = await soldCollection.updateOne(filter, updateDoc, options) 
+      res.send(result)
     })
   } finally {
   }
